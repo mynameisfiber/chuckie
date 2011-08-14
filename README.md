@@ -1,4 +1,4 @@
-##### Chuckie !["Rugrat + BoxLib = Chuckie"](https://github.com/mynameisfiber/chuckie/raw/master/chuckie.png)
+# Chuckie !["Rugrat + BoxLib = Chuckie"](https://github.com/mynameisfiber/chuckie/raw/master/chuckie.png)
 
 # What is this?
 
