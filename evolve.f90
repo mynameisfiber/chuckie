@@ -1,11 +1,12 @@
 module evolve
+  USE interfaces
   implicit none
-  include "omp_lib.h"
 
+  include "omp_lib.h"
+  
   CONTAINS
 
   subroutine advance (U, Unew, n, m, o, ncomp, ng, dx, dt)
-    !$f2py integer, dimension(3) :: lo, hi
     implicit none
     integer, dimension(3)                    :: lo, hi
     integer                                  :: ncomp,ng, n,m,o, i,j,k
@@ -16,20 +17,35 @@ module evolve
     m = hi(2) - lo(2) + 2 * ng
     o = hi(3) - lo(3) + 2 * ng
 
-    Unew =         U                +         dt * dU(U   , n, m, o, ncomp, ng, dx)
-    Unew = 0.75  * U + 0.25  * Unew + 0.25  * dt * dU(Unew, n, m, o, ncomp, ng, dx)
-    Unew = 1./3. * U + 2./3. * Unew + 2./3. * dt * dU(Unew, n, m, o, ncomp, ng, dx)
+    ! Shu/Osher 3rd order method:
+    ! |C.-W. Shu and S. Osher, Efficient implementation of essentially
+    ! | non-oscillatory shock-capturing schemes, Journal of Computational
+    ! | Physics, 77 (1988), pp. 439–471.
+    ! More information:
+    ! http://www.amath.washington.edu/~ketch/David_Ketcheson/Publications_files/lowstorage.pdf
+    Unew =         U                +         dt * dU(U   , ng, dx)
+    Unew = 0.75  * U + 0.25  * Unew + 0.25  * dt * dU(Unew, ng, dx)
+    Unew = 1./3. * U + 2./3. * Unew + 2./3. * dt * dU(Unew, ng, dx)
   end subroutine
+end module
 
 
-  function dU(U, n, m, o, ncomp, ng, dx)
+  function dU(U, ng, dx)
     implicit none
-    double precision, dimension(NComp, n, m, o) :: dU, U
-    integer                                     :: n, m, o, ncomp, ng
-    double precision                            :: dx, g, trA
-    double precision, dimension(6)              :: invg, Aup, Ricci
-    double precision, dimension(18)             :: Chris, Chrislow
-    integer                                     :: i,j,k,l,ijk,oi,oj,ok
+    double precision, dimension(:,:,:,:)              :: U
+    double precision, allocatable, dimension(:,:,:,:) :: dU
+    integer                                           :: n, m, o, ncomp, ng
+    double precision                                  :: dx, g, trA
+    double precision, dimension(6)                    :: invg, Aup, Ricci
+    double precision, dimension(18)                   :: Chris, Chrislow
+    integer                                           :: i,j,k,l,ijk,oi,oj,ok
+
+    ncomp = size(U,1)
+    n     = size(U,2)
+    m     = size(U,3)
+    o     = size(U,4)
+    allocate(dU(ncomp, n, m, o))
+
 
     !$omp parallel do default(none) shared(dU,U,n,m,o,ncomp,ng,dx) &
     !$omp private(g,trA,invg,Aup,Ricci,Chris,Chrislow,i,j,k,l,ijk,oi,oj,ok)
@@ -41,6 +57,8 @@ module evolve
         end do
       end do
     end do
+
+    deallocate(dU)
 
   end function
 
@@ -103,36 +121,36 @@ module evolve
   end function
 
 
-  function partial(U, n, m, o, ncomp, idx, i)
+  function partial(U, idx, i)
     implicit none
-    double precision, dimension(ncomp,n,m,o) :: U
-    double precision                         :: partial
-    integer                                  :: n, m, o, ncomp, idx, i
+    double precision, dimension(:,:,:,:) :: U
+    double precision                     :: partial
+    integer                              :: idx, i
 
     return
   end function
 
 
-  function partial2(U, n, m, o, ncomp, idx, i, j)
+  function partial2(U, idx, i, j)
     implicit none
-    double precision, dimension(ncomp,n,m,o) :: U
-    double precision                         :: partial2
-    integer                                  :: n, m, o, ncomp, idx, i, j
+    double precision, dimension(:,:,:,:) :: U
+    double precision                     :: partial2
+    integer                              :: idx, i, j
 
     return
   end function
 
 
-  function DiDj(U, n, m, o, ncomp, idx, i, j, ginv, Chris)
+  function DiDj(U, idx, i, j, ginv, Chris)
     implicit none
-    double precision, dimension(ncomp,n,m,o) :: U
-    double precision, dimension(6)           :: ginv
-    double precision, dimension(18)          :: Chris
-    double precision                         :: DiDj
-    integer                                  :: n, m, o, ncomp, idx, i, j
+    double precision, dimension(:,:,:,:) :: U
+    double precision, dimension(6)       :: ginv
+    double precision, dimension(18)      :: Chris
+    double precision                     :: DiDj
+    integer                              :: idx, i, j
 
     if (i .eq. j) then
-      DiDj = D2(U, n, m, o, ncomp, idx, ginv, Chris)
+      DiDj = D2(U, idx, ginv, Chris)
       return
     end if
 
@@ -140,29 +158,29 @@ module evolve
   end function
 
 
-  function D2(U, n, m, o, ncomp, idx, ginv, Chris)
+  function D2(U, idx, ginv, Chris)
     implicit none
-    double precision, dimension(Ncomp,n,m,o) :: U
-    double precision, dimension(6)           :: ginv
-    double precision, dimension(18)          :: Chris
-    double precision                         :: D2
-    integer                                  :: n, m, o, ncomp, idx
+    double precision, dimension(:,:,:,:) :: U
+    double precision, dimension(6)       :: ginv
+    double precision, dimension(18)      :: Chris
+    double precision                     :: D2
+    integer                              :: idx
 
     return
   end function
 
 
-  function iMat(i, j) result(k)
+  function iMat(i, j)
     implicit none
-    integer :: i, j, k
+    integer :: i, j, k, iMat
 
     return
   end function
 
 
-  function iSym(i, j) result(k)
+  function iSym(i, j)
     implicit none
-    integer :: i, j, k
+    integer :: i, j, iSym
 
     return
   end function
