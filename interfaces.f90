@@ -42,21 +42,5 @@ module interfaces
       integer                              :: idx
     end function
     
-    function iMat(i, j)
-      implicit none
-      integer :: i, j, k, iMat
-    end function
-
-
-    function iSym(i, j)
-      implicit none
-      integer :: i, j, iSym
-    end function
-
-
-    function get_ijk(i, j, k) result(ijk)
-      implicit none
-      integer :: i, j, k, ijk
-    end function
   end interface
 end module

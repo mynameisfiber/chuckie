@@ -1,3 +1,7 @@
+
+#define iMat(i, j) ( (i) + (j) + MIN(1,(i),(j)) ) 
+#define iSym(i, j) ( (i) + (j)*6 )
+
 module evolve
   USE interfaces
   implicit none
@@ -31,6 +35,7 @@ end module
 
 
   function dU(U, ng, dx)
+    use interfaces
     implicit none
     double precision, dimension(:,:,:,:)              :: U
     double precision, allocatable, dimension(:,:,:,:) :: dU
@@ -44,6 +49,10 @@ end module
     n     = size(U,2)
     m     = size(U,3)
     o     = size(U,4)
+
+    if (allocated(dU)) then
+      deallocate(dU)
+    endif
     allocate(dU(ncomp, n, m, o))
 
 
@@ -57,8 +66,6 @@ end module
         end do
       end do
     end do
-
-    deallocate(dU)
 
   end function
 
@@ -142,12 +149,13 @@ end module
 
 
   function DiDj(U, idx, i, j, ginv, Chris)
+    use interfaces, only: D2
     implicit none
-    double precision, dimension(:,:,:,:) :: U
-    double precision, dimension(6)       :: ginv
-    double precision, dimension(18)      :: Chris
-    double precision                     :: DiDj
-    integer                              :: idx, i, j
+    double precision, dimension(:,:,:,:),intent(in) :: U
+    double precision, dimension(6),intent(in)       :: ginv
+    double precision, dimension(18),intent(in)      :: Chris
+    double precision,intent(out)                    :: DiDj
+    integer, intent(in)                             :: idx, i, j
 
     if (i .eq. j) then
       DiDj = D2(U, idx, ginv, Chris)
@@ -170,26 +178,9 @@ end module
   end function
 
 
-  function iMat(i, j)
-    implicit none
-    integer :: i, j, k, iMat
-
-    return
-  end function
-
-
-  function iSym(i, j)
-    implicit none
-    integer :: i, j, iSym
-
-    return
-  end function
-
-
   function get_ijk(i, j, k) result(ijk)
     implicit none
     integer :: i, j, k, ijk
 
     return
   end function
-end module
