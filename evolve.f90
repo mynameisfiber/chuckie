@@ -10,16 +10,23 @@ module evolve
   
   CONTAINS
 
+  subroutine advancechombo()
+    ! create this function to take in the chombo style data definition (ie:
+    ! double precision    U(lo(1)-ng:hi(1)+ng,lo(2)-ng:hi(2)+ng,Ncomp)), calc
+    ! n, m, o and send to the normal advance function.
+    !
+    ! this function should _simply_ translate the indicies
+  end subroutine
+
   subroutine advance (U, Unew, n, m, o, ncomp, ng, dx, dt)
+    !f2py double precision, dimension(Ncomp, n, m, o), intent(in)  :: U
+    !f2py double precision, dimension(Ncomp, n, m, o), intent(out) :: Unew
+    !f2py integer, intent(in)                                      :: n, m, o, ncomp, ng
+    !f2py double precision, intent(in)                             :: dx, dt
     implicit none
-    integer, dimension(3)                    :: lo, hi
-    integer                                  :: ncomp,ng, n,m,o, i,j,k
+    integer                                  :: ncomp,ng, n,m,o
     double precision                         :: dx,dt
     double precision, dimension(Ncomp,n,m,o) :: U, Unew
-
-    n = hi(1) - lo(1) + 2 * ng
-    m = hi(2) - lo(2) + 2 * ng
-    o = hi(3) - lo(3) + 2 * ng
 
     ! Shu/Osher 3rd order method:
     ! |C.-W. Shu and S. Osher, Efficient implementation of essentially
@@ -37,13 +44,13 @@ end module
   function dU(U, ng, dx)
     use interfaces
     implicit none
-    double precision, dimension(:,:,:,:)              :: U
-    double precision, allocatable, dimension(:,:,:,:) :: dU
-    integer                                           :: n, m, o, ncomp, ng
-    double precision                                  :: dx, g, trA
-    double precision, dimension(6)                    :: invg, Aup, Ricci
-    double precision, dimension(18)                   :: Chris, Chrislow
-    integer                                           :: i,j,k,l,ijk,oi,oj,ok
+    double precision, dimension(:,:,:,:),intent(in)               :: U
+    double precision, allocatable, dimension(:,:,:,:),intent(out) :: dU
+    integer,intent(in)                                            :: n, m, o, ncomp, ng
+    double precision, intent(in)                                  :: dx, g, trA
+    double precision, dimension(6),intent(in)                     :: invg, Aup, Ricci
+    double precision, dimension(18),intent(in)                    :: Chris, Chrislow
+    integer,intent(in)                                            :: i,j,k,l,ijk,oi,oj,ok
 
     ncomp = size(U,1)
     n     = size(U,2)
