@@ -1,3 +1,4 @@
+! use interfaces, only: dU, partial, partial2, DiDj, D2
 module interfaces
   implicit none
 
@@ -10,17 +11,17 @@ module interfaces
       integer                                           :: ng
     end function
 
-    function partial(U, idx, i)
+    function partial(U, idx, i, dx)
       implicit none
       double precision, dimension(:,:,:,:) :: U
-      double precision                     :: partial
+      double precision                     :: partial, dx
       integer                              :: idx, i
     end function
 
-    function partial2(U, idx, i, j)
+    function partial2(U, idx, i, j, dx)
       implicit none
       double precision, dimension(:,:,:,:) :: U
-      double precision                     :: partial2
+      double precision                     :: partial2, dx
       integer                              :: idx, i, j
     end function
 

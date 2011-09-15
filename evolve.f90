@@ -1,9 +1,11 @@
 
+#define ORDER 2
+
 #define iMat(i, j) ( (i) + (j) + MIN(1,(i),(j)) ) 
 #define iSym(i, j) ( (i) + (j)*6 )
 
 module evolve
-  USE interfaces
+  USE interfaces, only: dU
   implicit none
 
   include "omp_lib.h"
@@ -42,15 +44,17 @@ end module
 
 
   function dU(U, ng, dx)
-    use interfaces
+    use interfaces, only: partial, partial2, DiDj, D2
     implicit none
-    double precision, dimension(:,:,:,:),intent(in)               :: U
-    double precision, allocatable, dimension(:,:,:,:),intent(out) :: dU
-    integer,intent(in)                                            :: n, m, o, ncomp, ng
-    double precision, intent(in)                                  :: dx, g, trA
-    double precision, dimension(6),intent(in)                     :: invg, Aup, Ricci
-    double precision, dimension(18),intent(in)                    :: Chris, Chrislow
-    integer,intent(in)                                            :: i,j,k,l,ijk,oi,oj,ok
+    double precision, dimension(:,:,:,:),intent(in)   :: U
+    double precision, allocatable, dimension(:,:,:,:) :: dU
+    integer,intent(in)                                :: ng
+    double precision, intent(in)                      :: dx
+    integer                                           :: n, m, o, ncomp
+    double precision                                  :: g, trA
+    double precision, dimension(6)                    :: invg, Aup, Ricci
+    double precision, dimension(18)                   :: Chris, Chrislow
+    integer                                           :: i,j,k,l,ijk,oi,oj,ok
 
     ncomp = size(U,1)
     n     = size(U,2)
@@ -135,21 +139,40 @@ end module
   end function
 
 
-  function partial(U, idx, i)
+  function partial(U, idx, i, dx)
     implicit none
     double precision, dimension(:,:,:,:) :: U
-    double precision                     :: partial
+    double precision                     :: partial, dx
     integer                              :: idx, i
+    integer*1, dimension(3)              :: di
+
+    di    = 0
+    di(i) = 1
+
+#if ORDER == 4
+    partial = (2./ 3. * U(idx,   di(1),   di(2),   di(3)) - 2./ 3. * U(idx,  -di(1),   -di(2),   -di(3))  &
+               1./12. * U(idx, 2*di(1), 2*di(2), 2*di(3)) - 1./12. * U(idx,-2*di(1), -2*di(2), -2*di(3))) &
+              / (dx)
+#else
+    partial = (U(idx, di(1), di(2), di(3)) - U(idx, -di(1), -di(2),-di(3)))/(2.0*dx)
+#endif
 
     return
   end function
 
 
-  function partial2(U, idx, i, j)
+  function partial2(U, idx, i, j, dx)
+    use interfaces, only: partial
     implicit none
     double precision, dimension(:,:,:,:) :: U
-    double precision                     :: partial2
+    double precision                     :: partial2, dx
     integer                              :: idx, i, j
+    integer*1, dimension(3)              :: di
+
+    di    = 0
+    di(i) = 1
+
+    partial2 = (partial(U(:, di(1), di(2), di(3)), idx, i) - partial(U(:, -di(1), -di(2), -di(3)), idx, j))/dx
 
     return
   end function
@@ -161,7 +184,7 @@ end module
     double precision, dimension(:,:,:,:),intent(in) :: U
     double precision, dimension(6),intent(in)       :: ginv
     double precision, dimension(18),intent(in)      :: Chris
-    double precision,intent(out)                    :: DiDj
+    double precision                                :: DiDj
     integer, intent(in)                             :: idx, i, j
 
     if (i .eq. j) then
@@ -174,12 +197,27 @@ end module
 
 
   function D2(U, idx, ginv, Chris)
+    use interfaces, only: partial, partial2
     implicit none
     double precision, dimension(:,:,:,:) :: U
     double precision, dimension(6)       :: ginv
     double precision, dimension(18)      :: Chris
     double precision                     :: D2
-    integer                              :: idx
+    integer                              :: idx, i, j, k
+
+    D2 = 0.0;
+    do i=0,3
+      do j=0,3
+        D2 = D2 +  ginv(iMat(i,j)) * partial2(U, idx, i, j)
+        do k=0,3
+          D2 = D2 - ginv(iMat(i,j)) * G(iSym(k, iMat(i,j))) * partial(U, idx, k)
+        end do
+        D2 = D2 + 2.0 * ginv(iMat(i,j)) * partial(U,idx,i) * partial(U,idx,j)
+      end do
+    end do
+    
+    D2 = D2 * exp(-4.0*U(1,0,0,0)) !what index should 1 really be? we need
+                                   !phi... how should this be organized?
 
     return
   end function
