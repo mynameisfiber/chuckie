@@ -172,23 +172,23 @@ end module
     di    = 0
     di(i) = 1
 
-    partial2 = (partial(U(:, di(1), di(2), di(3)), idx, i) - partial(U(:, -di(1), -di(2), -di(3)), idx, j))/dx
+    partial2 = (partial(U(:, di(1), di(2), di(3)), idx, i, dx) - partial(U(:, -di(1), -di(2), -di(3)), idx, j, dx))/dx
 
     return
   end function
 
 
-  function DiDj(U, idx, i, j, ginv, Chris)
+  function DiDj(U, idx, i, j, ginv, Chris, dx)
     use interfaces, only: D2
     implicit none
     double precision, dimension(:,:,:,:),intent(in) :: U
     double precision, dimension(6),intent(in)       :: ginv
     double precision, dimension(18),intent(in)      :: Chris
-    double precision                                :: DiDj
+    double precision                                :: DiDj, dx
     integer, intent(in)                             :: idx, i, j
 
     if (i .eq. j) then
-      DiDj = D2(U, idx, ginv, Chris)
+      DiDj = D2(U, idx, ginv, Chris, dx)
       return
     end if
 
@@ -196,23 +196,23 @@ end module
   end function
 
 
-  function D2(U, idx, ginv, Chris)
+  function D2(U, idx, ginv, Chris, dx)
     use interfaces, only: partial, partial2
     implicit none
     double precision, dimension(:,:,:,:) :: U
     double precision, dimension(6)       :: ginv
     double precision, dimension(18)      :: Chris
-    double precision                     :: D2
+    double precision                     :: D2, dx
     integer                              :: idx, i, j, k
 
     D2 = 0.0;
     do i=0,3
       do j=0,3
-        D2 = D2 +  ginv(iMat(i,j)) * partial2(U, idx, i, j)
+        D2 = D2 +  ginv(iMat(i,j)) * partial2(U, idx, i, j, dx)
         do k=0,3
-          D2 = D2 - ginv(iMat(i,j)) * G(iSym(k, iMat(i,j))) * partial(U, idx, k)
+          D2 = D2 - ginv(iMat(i,j)) * G(iSym(k, iMat(i,j))) * partial(U, idx, k, dx)
         end do
-        D2 = D2 + 2.0 * ginv(iMat(i,j)) * partial(U,idx,i) * partial(U,idx,j)
+        D2 = D2 + 2.0 * ginv(iMat(i,j)) * partial(U,idx,i, dx) * partial(U,idx,j, dx)
       end do
     end do
     
